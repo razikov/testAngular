@@ -1,0 +1,19 @@
+
+<div fxLayout="column" *ngIf="hero" class="form-hero-update">
+    <h2 fxFlex fxFlexAlign="center">
+        <!--{{hero.name | uppercase}} <ng-container i18n="@@module.hero.detail.part_title">Details</ng-container>-->
+        <ng-container i18n="@@module.hero.detail.update">Update hero</ng-container>
+    </h2>
+    <mat-form-field fxFlex fxFlexAlign="center">
+        <mat-label i18n="@@module.hero.detail.id">id</mat-label>
+        <input matInput disabled value="{{hero.id}}">
+    </mat-form-field>
+    <mat-form-field fxFlex fxFlexAlign="center">
+        <mat-label i18n="@@module.hero.detail.hero">name</mat-label>
+        <input matInput [(ngModel)]="hero.name">
+    </mat-form-field>
+    <div fxFlex fxFlexAlign="center">
+        <button mat-stroked-button color="primary" (click)="goBack()" i18n="@@module.hero.detail.action.goback">go back</button>&nbsp;
+        <button mat-stroked-button color="primary" (click)="save()" i18n="@@module.hero.detail.action.save_and_goback">save & go back</button>
+    </div>
+</div>

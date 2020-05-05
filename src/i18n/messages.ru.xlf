@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en-US" datatype="plaintext" original="ng2.template">
+    <body>
+      <trans-unit id="title.dashboard" datatype="html">
+        <source>Dashboard</source>
+        <target state="translated">Доска почёта</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.html</context>
+          <context context-type="linenumber">4</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="title.heroes" datatype="html">
+        <source>Heroes</source>
+        <target state="translated">Герои</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.html</context>
+          <context context-type="linenumber">5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.detail.part_title" datatype="html">
+        <source>Details</source>
+        <target state="translated">Детали</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-details/hero-details.component.html</context>
+          <context context-type="linenumber">2</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.detail.id" datatype="html">
+        <source>id:</source>
+        <target state="translated">Идентификатор: </target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-details/hero-details.component.html</context>
+          <context context-type="linenumber">3</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.detail.name" datatype="html">
+        <source>name:</source>
+        <target state="translated">Имя: </target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-details/hero-details.component.html</context>
+          <context context-type="linenumber">5</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.detail.placeholder.name" datatype="html">
+        <source>name</source>
+        <target state="translated">имя</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-details/hero-details.component.html</context>
+          <context context-type="linenumber">6</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.detail.action.goback" datatype="html">
+        <source>go back</source>
+        <target state="translated">Назад</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-details/hero-details.component.html</context>
+          <context context-type="linenumber">9</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.detail.action.save_and_goback" datatype="html">
+        <source>save &amp; go back</source>
+        <target state="translated">Сохранить и назад</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-details/hero-details.component.html</context>
+          <context context-type="linenumber">10</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.list.title" datatype="html">
+        <source>My Heroes</source>
+        <target state="translated">Мои герои</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-list/hero-list.component.html</context>
+          <context context-type="linenumber">1</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.list.hero" datatype="html">
+        <source>Hero name:</source>
+        <target state="translated">Имя героя: </target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-list/hero-list.component.html</context>
+          <context context-type="linenumber">4</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.list.action.add" datatype="html">
+        <source>add</source>
+        <target state="translated">Добавить</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-list/hero-list.component.html</context>
+          <context context-type="linenumber">7</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.hero.dashboard.title" datatype="html">
+        <source>Top Heroes</source>
+        <target state="translated">Топ героев</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/dashboard/dashboard.component.html</context>
+          <context context-type="linenumber">1</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.messages.title" datatype="html">
+        <source>Messages</source>
+        <target state="translated">Сообщения</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/messages/messages.component.html</context>
+          <context context-type="linenumber">2</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.messages.action.clear" datatype="html">
+        <source>clear</source>
+        <target state="translated">Очистить</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/messages/messages.component.html</context>
+          <context context-type="linenumber">4</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="module.herosearch.title" datatype="html">
+        <source>Hero Search</source>
+        <target state="translated">Найти героя</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/hero-search/hero-search.component.html</context>
+          <context context-type="linenumber">2</context>
+        </context-group>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

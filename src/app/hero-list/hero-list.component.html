@@ -1,0 +1,46 @@
+
+
+<div fxLayout="column">
+    <h2 fxFlex fxFlexAlign="center"
+        i18n="@@module.hero.list.title"
+        style="font-weight: 500; font-size: 24px;">
+        My Heroes
+    </h2>
+    <div fxFlex fxFlexAlign="center">
+        <div fxLayout="column">
+        <!--<form class="create-hero-form">-->
+            <mat-form-field fxFlex>
+                <mat-label i18n="@@module.hero.list.hero">Hero name</mat-label>
+                <!--<input matInput [formControl]="nameFormControl" [errorStateMatcher]="matcher" placeholder="Hero name" i18n-placeholder="@@module.hero.list.hero">-->
+                <input matInput #heroName>
+                <!--<mat-hint>hint!</mat-hint>-->
+<!--                <mat-error *ngIf="nameFormControl.hasError('name') && !nameFormControl.hasError('required')">
+                    Please enter a valid name
+                </mat-error>
+                <mat-error *ngIf="nameFormControl.hasError('required')">
+                    Email is <strong>required</strong>
+                </mat-error>-->
+            </mat-form-field>
+            <div fxFlex>
+                <button mat-stroked-button color="primary" (click)="add(heroName.value); heroName.value=''" i18n="@@module.hero.list.action.add">add</button>
+            </div>
+        <!--</form>-->
+        </div>
+    </div>
+    <div fxFlex fxFlexAlign="center">
+        <mat-list style="min-width: 600px;">
+            <mat-list-item *ngFor="let hero of heroes; let i=index">
+                <img matListAvatar src="../../../assets/img/hero.png" alt="avatar hero">
+                <div mat-line>{{hero.name}}</div>
+                <div mat-line>#{{hero.id}}</div>
+                <button mat-icon-button mat-button routerLink="/hero-details/{{hero.id}}">
+                    <mat-icon aria-hidden="false" aria-label="update hero">edit</mat-icon>
+                </button>
+                <button mat-icon-button mat-button (click)="delete(hero)">
+                    <mat-icon aria-hidden="false" aria-label="delete hero">delete</mat-icon>
+                </button>
+                <mat-divider *ngIf="heroes.length != i + 1"></mat-divider>
+            </mat-list-item>
+        </mat-list>
+    </div>
+</div>

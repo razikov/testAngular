@@ -1,0 +1,31 @@
+<!--<div id="search-component">
+    <h4><label for="search-box" i18n="@@module.herosearch.title">Hero Search</label></h4>
+
+    <input #searchBox id="search-box" (input)="search(searchBox.value)" />
+
+    <ul class="search-result">
+        <li *ngFor="let hero of heroes$ | async" >
+            <a routerLink="/hero-details/{{hero.id}}">
+                {{hero.name}}
+            </a>
+        </li>
+    </ul>
+</div>-->
+
+<mat-form-field>
+    <input type="text"
+           placeholder="Hero Search"
+           i18n-placeholder="@@findHero"
+           matInput
+           [matAutocomplete]="heroesAutocomplete"
+           [formControl]="heroFormControl">
+    <mat-autocomplete #heroesAutocomplete="matAutocomplete" (optionSelected)="onRedirect($event)">
+        <mat-option *ngFor="let hero of heroes$ | async" [value]="hero.name" id="{{hero.id}}">
+<!--            <a routerLink="/hero-details/{{hero.id}}">
+                {{// hero.name | capitalizefirst }}
+                
+            </a>-->
+            {{ hero.name }}
+        </mat-option>
+    </mat-autocomplete>
+</mat-form-field>

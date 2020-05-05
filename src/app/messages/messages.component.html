@@ -1,0 +1,15 @@
+<div fxLayout="column" *ngIf="messageService.messages.length">
+    <div fxFlex fxFlexAlign="center">
+        <h2 i18n="@@module.messages.title">Messages</h2>
+    </div>
+    <div fxFlex fxFlexAlign="center">
+        <button mat-stroked-button color="accent" (click)="messageService.clear()" i18n="@@module.messages.action.clear">clear</button>
+    </div>
+    <div fxFlex fxFlexAlign="center">
+        <mat-list style="min-width: 600px;">
+            <mat-list-item *ngFor='let message of messageService.messages'>
+                <div mat-line>{{message}}</div>
+            </mat-list-item>
+        </mat-list>
+    </div>
+</div>

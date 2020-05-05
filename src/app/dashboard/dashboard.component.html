@@ -1,0 +1,21 @@
+
+<div fxLayout="column">
+    <h2 fxFlex fxFlexAlign="center"
+        i18n="@@module.hero.dashboard.title"
+        style="font-weight: 500; font-size: 24px;">
+        Top Heroes
+    </h2>
+    <div fxFlex fxFlexAlign="center" >
+        <app-hero-search></app-hero-search>
+    </div>
+</div>
+<div fxLayout="row wrap" fxLayoutAlign="stretch">
+    <mat-card fxFlex fxFlex.lt-md="45" fxFlex.lt-sm="100" role='hero' *ngFor="let hero of heroes" style="margin: 8px;">
+        <mat-card-title>{{ hero.name }}</mat-card-title>
+        <mat-card-actions>
+            <a mat-icon-button [title]="hero.name + ' details'" routerLink="/hero-details/{{hero.id}}">
+                <mat-icon>edit</mat-icon>
+            </a>
+        </mat-card-actions>
+    </mat-card>
+</div>

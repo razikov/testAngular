@@ -13,6 +13,12 @@
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
+      "i18n": {
+        "sourceLocale": "en-US",
+        "locales": {
+          "ru": "src/i18n/messages.ru.xlf"
+        }
+      },
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
@@ -28,11 +34,18 @@
               "src/assets"
             ],
             "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [
+              "node_modules/@webcomponents/webcomponentsjs/custom-elements-es5-adapter.js",
+              "node_modules/@webcomponents/webcomponentsjs/webcomponents-bundle.js"
+            ]
           },
           "configurations": {
+            "ru": {
+              "localize": ["ru"]              
+            },
             "production": {
               "fileReplacements": [
                 {
@@ -69,6 +82,9 @@
             "browserTarget": "testAngular:build"
           },
           "configurations": {
+            "ru": {
+              "browserTarget": "testAngular:build:ru"
+            },
             "production": {
               "browserTarget": "testAngular:build:production"
             }
@@ -92,6 +108,7 @@
               "src/assets"
             ],
             "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -123,6 +140,7 @@
           }
         }
       }
-    }},
+    }
+  },
   "defaultProject": "testAngular"
 }
