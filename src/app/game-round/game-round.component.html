@@ -1,0 +1,47 @@
+<div fxLayout="column" gdGap="8px" fxLayoutAlign="stretch">
+    <div *ngFor="let round of rounds; let i = index" fxFlex fxFlexAlign="center">
+        <h3>Round {{ i+1 }}</h3>
+        <div fxLayout="row">
+            <mat-card fxFlex role='player' style="margin: 8px; min-width:400px">
+                <mat-card-title>{{ round.firstPlayer?.player.hero.name }}</mat-card-title>
+                <mat-card-content>
+                    <p>[a:{{ round.firstPlayer?.player.currentAttack }}, 
+                        d:{{ round.firstPlayer?.player.currentDefence }}, 
+                        s:{{ round.firstPlayer?.player.currentSpeed }} ]</p>
+                    <p>speed: [{{ round.rollsSpeed?.get(round.firstPlayerIndex) }}] sum={{ round.rollsSpeedValue?.get(round.firstPlayerIndex) }}</p>
+                    <p></p>
+                    <p>attack: [{{ round.firstPlayerStep?.rollAttack }}]</p>
+                    <p></p>
+                    <p></p>
+                    <p>defence: [{{ round.secondPlayerStep?.rollDefence }}]</p>
+                    <p>damage={{ round.secondPlayerStep?.damage }} lost=[{{ round.secondPlayerStep?.damageSet }}]</p>
+                </mat-card-content>
+                <!-- <mat-card-actions>
+                    <a mat-icon-button [title]="hero.name + ' details'" routerLink="/hero-details/{{hero.id}}">
+                        <mat-icon>edit</mat-icon>
+                    </a>
+                </mat-card-actions> -->
+            </mat-card>
+            <mat-card fxFlex role='player' style="margin: 8px; min-width:400px">
+                <mat-card-title>{{ round.secondPlayer?.player.hero.name }}</mat-card-title>
+                <mat-card-content>
+                    <p>[a:{{ round.secondPlayer?.player.currentAttack }}, 
+                        d:{{ round.secondPlayer?.player.currentDefence }}, 
+                        s:{{ round.secondPlayer?.player.currentSpeed }} ]</p>
+                    <p>speed: [{{ round.rollsSpeed?.get(round.secondPlayerIndex) }}] sum={{ round.rollsSpeedValue?.get(round.secondPlayerIndex) }}</p>
+                    <p></p>
+                    <p>defence: [{{ round.firstPlayerStep?.rollDefence }}]</p>
+                    <p>damage={{ round.firstPlayerStep?.damage }} lost=[{{ round.firstPlayerStep?.damageSet }}]</p>
+                    <p></p>
+                    <p>attack: [{{ round.secondPlayerStep?.rollAttack }}] </p>
+                    <p></p>
+                </mat-card-content>
+                <!-- <mat-card-actions>
+                    <a mat-icon-button [title]="hero.name + ' details'" routerLink="/hero-details/{{hero.id}}">
+                        <mat-icon>edit</mat-icon>
+                    </a>
+                </mat-card-actions> -->
+            </mat-card>
+        </div>
+    </div>
+</div>

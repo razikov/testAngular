@@ -1,0 +1,58 @@
+<!-- 2 поля выбора героя для игроков; 
+    2 переключателя игрок/компьютер для игроков; 
+    для игрока игрок кнопки для управления; 
+    поле вывода состояния игры; 
+    кнопка старта игры -->
+<div fxLayout="column" gdGap="8px" fxLayoutAlign="stretch">
+    <div fxFlex fxFlexAlign="center">
+        <div fxLayout="row">
+            <div fxFlex style="padding:8px;">
+                <mat-form-field>
+                    <mat-label>First Hero</mat-label>
+                    <mat-select (selectionChange)="firstChange($event)">
+                        <mat-option *ngFor="let firstHero of heroes" [value]="firstHero.id" 
+                            [disabled]="secondChangeHero !== null && firstHero.id === secondChangeHero.id">
+                            <span>[a:{{ firstHero.attackDice }}, d:{{ firstHero.defenceDice }}, s:{{ firstHero.speedDice }}] {{ firstHero.name }}</span>
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field><br>
+                <mat-checkbox
+                    class="example-margin"
+                    [(ngModel)]="firstManual"
+                    labelPosition="after">
+                    Human play for {{ firstChangeHero?.name || 'this hero' }}
+                </mat-checkbox>
+            </div>
+            <div fxFlex style="padding:8px;">
+                <mat-form-field>
+                    <mat-label>Second Hero</mat-label>
+                    <mat-select (selectionChange)="secondChange($event)">
+                        <mat-option *ngFor="let secondHero of heroes" [value]="secondHero.id" 
+                            [disabled]="firstChangeHero !== null && secondHero.id === firstChangeHero.id">
+                            <span>[a:{{ secondHero.attackDice }}, d:{{ secondHero.defenceDice }}, s:{{ secondHero.speedDice }}] {{ secondHero.name }}</span>
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field><br>
+                <mat-checkbox
+                    class="example-margin"
+                    [(ngModel)]="secondManual"
+                    labelPosition="after">
+                    Human play for {{ secondChangeHero?.name || 'this hero' }}
+                </mat-checkbox>
+            </div>
+        </div>
+    </div>
+    <div fxFlex fxFlexAlign="center">
+        <button mat-stroked-button color="primary" (click)="game()">create game</button>
+    </div>
+    <div fxFlex fxFlexAlign="center">
+        <ul>
+            <li *ngFor="let error of errors">{{ error }}</li>
+        </ul>
+        <button mat-stroked-button color="primary" (click)="prevHistory()">prew</button>
+        <button mat-stroked-button color="primary" (click)="nextHistory()">next</button>
+        <p>{{ historyIndex }}/{{ maxHistoryIndex }}</p>
+        <app-game-player [context]="context"></app-game-player>
+        <!-- <app-game-round [rounds]="context.rounds"></app-game-round> -->
+    </div>
+</div>

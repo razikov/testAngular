@@ -1,0 +1,24 @@
+
+<svg class="viewGrid" [width]="width" [height]="height" [viewBox]="viewBox" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <g transform="" fill="white" stroke="black" strokeWidth="0.3">
+        <g class="grid">
+            <g *ngfor="let hex of hexagons"
+                [transform]="`translate(${pixel.x},${pixel.y})`"
+                draggable="true"
+                (mouseenter)="onMouseEnter($event)"
+                (mouseover)="onMouseOver($event)"
+                (mouseleave)="onMouseLeave($event)"
+                (click)="onClick($event)"
+                (dragstart)="onDragStart($event)"
+                (dragend)="onDragEnd($event)"
+                (dragover)="onDragOver($event)"
+                (drop)="onDrop($event)"
+                >
+                <g class="hexagon">
+                    <polygon [points]="hex.points" [fill]="hex.fill" [style]="hex.cellStyle" />
+                    <text dy="0.4em" dx="-1em" fontSize="0.15em" strokeWidth="0.2">{{ hex.q }}, {{ hex.r }}</text>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

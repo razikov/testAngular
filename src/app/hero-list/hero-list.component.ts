@@ -6,6 +6,8 @@ import { HeroRemoveComponent } from '../hero-remove/hero-remove.component';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 //import { I18n } from '@ngx-translate/i18n-polyfill';
+// import { Game } from '../game';
+import { Game } from '../game.v2';
 
 @Component({
   selector: 'app-hero-list',
@@ -63,5 +65,11 @@ export class HeroListComponent implements OnInit {
           }
         });
     }
+
+    // game() {
+    //   let game = new Game(this.heroes[0], this.heroes[1]);
+    //   game.run();
+    //   game.flow();
+    // }
 
 }
