@@ -248,6 +248,23 @@ export class Dice
     }
 }
 
+class GameState
+{
+    START_GAME = 'startGame';
+    START_ROUND = 'startRound';
+    ROLL_SPEED = 'rollSpeed';
+    BATTLE_FIRST_STEP = 'actionsFirstPlayer';
+    BATTLE_SECOND_STEP = 'actionsSecondPlayer';
+    CHOOSE_DAMAGE_SET = 'chooseDamageSet';
+    END_ROUND = 'endRound';
+    ROLL_RECOVERY = 'rollRecovery';
+    END_GAME = 'endGame';
+
+    nextState(context) {}
+}
+
+
+
 export class GameContext
 {
     static readonly FIRST_PLAYER = 0;
@@ -393,12 +410,11 @@ export class GameContext
     }
 
     calculateDamage(): void {
-        // TODO: отсортировать значения
         // Если пул кубиков защиты меньше пула атаки надо добавить дефолтные кубики на 2
         this.rollAttack.sort((a: number, b: number) => b - a);
         this.rollDefence.sort((a: number, b: number) => b - a);
         let diffCountDices = this.rollAttack.length - this.rollDefence.length;
-        let defence = lodashClonedeep(this.rollDefence); // TODO: найти клонирование полегче полегче
+        let defence = lodashClonedeep(this.rollDefence); // TODO: найти клонирование полегче
         if (diffCountDices > 0) {
             for (let index = 0; index < diffCountDices; index++) {
                 defence.push(2);
@@ -480,6 +496,7 @@ export class Game
     state: string;
     context: GameContext;
     onEndRound$: BehaviorSubject<GameContext>;
+    onPlayerEvent$: BehaviorSubject<any>;
 
     constructor(context: GameContext, dice: Dice = new Dice(1, 6)) {
         this.dice = dice;
@@ -487,6 +504,7 @@ export class Game
         this.context = context;
         this.context.setState(this.state);
         this.onEndRound$ = new BehaviorSubject(null);
+        this.onPlayerEvent$ = new BehaviorSubject(null);
     }
 
     flow() {
@@ -505,7 +523,10 @@ export class Game
             case 'rollSpeed':
                 // Кидаем кубики: скорость первого и второго игрока
                 for (const [index, player] of this.context.players) {
-                    player.rollSpeed();
+                    this.onPlayerEvent$.next({
+                        name: 'rollSpeed',
+                        player: player,
+                    })
                 }
                 break;
             case 'actionsFirstPlayer':
@@ -514,10 +535,18 @@ export class Game
                 for (const [index, player] of this.context.players) {
                     switch (index) {
                         case this.context.firstPlayerIndex:
-                            player.rollAttack();
+                            // player.rollAttack();
+                            this.onPlayerEvent$.next({
+                                name: 'rollAttack',
+                                player: player,
+                            })
                             break;
                         case this.context.secondPlayerIndex:
-                            player.rollDefence();
+                            // player.rollDefence();
+                            this.onPlayerEvent$.next({
+                                name: 'rollDefence',
+                                player: player,
+                            })
                             break;
                         default: throw new Error("incorrect player: " + player);
                     }
@@ -529,10 +558,16 @@ export class Game
                 for (const [index, player] of this.context.players) {
                     switch (index) {
                         case this.context.secondPlayerIndex:
-                            player.rollAttack();
+                            this.onPlayerEvent$.next({
+                                name: 'rollAttack',
+                                player: player,
+                            })
                             break;
                         case this.context.firstPlayerIndex:
-                            player.rollDefence();
+                            this.onPlayerEvent$.next({
+                                name: 'rollDefence',
+                                player: player,
+                            })
                             break;
                         default: throw new Error("incorrect player: " + player);
                     }
@@ -541,7 +576,11 @@ export class Game
             case 'chooseDamageSet':
                 for (const [index, player] of this.context.players) {
                     if (index !== this.context.stepPlayerIndex) {
-                        player.chooseDamageSet(this.context.damage);
+                        this.onPlayerEvent$.next({
+                            name: 'chooseDamageSet',
+                            damage: this.context.damage,
+                            player: player,
+                        })
                     }
                 }
                 break;
@@ -564,7 +603,11 @@ export class Game
                     throw new Error("looser not found");
                 }
                 if (looser.isNeedRecovery()) {
-                    looser.rollRecovery();
+                    // looser.rollRecovery();
+                    this.onPlayerEvent$.next({
+                        name: 'rollRecovery',
+                        player: looser,
+                    })
                     return;
                 }
                 this.state = 'endGame';
@@ -579,6 +622,10 @@ export class Game
 
     onRolledRecoveryHandler(roll: number[], player: PlayerI) {
         // восстанавливаем либо убиваем проигравшего
+        if (['rollRecovery'].indexOf(this.context.state) === -1) {
+            console.warn(this.context.state, 'rollRecovery');
+            return;
+        }
         this.context.addRecoveryRoll(roll, player);
         if (player.isNeedRecovery()) {
             this.state = 'rollRecovery';
@@ -593,6 +640,10 @@ export class Game
     }
 
     onChoosedDamageSetHandler(damageSet, player) {
+        if (['chooseDamageSet'].indexOf(this.context.state) === -1) {
+            console.warn(this.context.state, 'chooseDamageSet');
+            return;
+        }
         this.context.takeDamage(damageSet, player);
         //если после получения повреждений игрок проиграл заканчиваем раунд, иначе следующий шаг битвы
         if (this.isGameOver()) {
@@ -606,6 +657,10 @@ export class Game
     }
 
     onRolledBattleHandler(roll, player) {
+        if (['actionsFirstPlayer', 'actionsSecondPlayer'].indexOf(this.context.state) === -1) {
+            console.warn(this.context.state, 'actionsFirstPlayer,actionsSecondPlayer');
+            return;
+        }
         this.context.addAttackRoll(roll, player);
         this.context.addDefenceRoll(roll, player);
         if (this.context.rollAttack !== null && this.context.rollDefence !== null) {
@@ -637,6 +692,10 @@ export class Game
     }
 
     onRolledSpeedHandler(playerRollSpeed: number[], player: PlayerI) {
+        if (['rollSpeed'].indexOf(this.context.state) === -1) {
+            console.warn(this.context.state, 'rollSpeed');
+            return;
+        }
         this.context.addSpeedRoll(playerRollSpeed, player);
         if (this.context.getFirstSpeedValue() !== undefined && this.context.getSecondSpeedValue() !== undefined) {
             if (this.context.getFirstSpeedValue() === this.context.getSecondSpeedValue()) {

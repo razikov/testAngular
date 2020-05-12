@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { Subject, BehaviorSubject } from 'rxjs';
 import { HeroService } from '../hero.service';
 import { Hero } from '../hero';
-import { Game, PlayerAI, Player, Dice, GameContext } from '../game.v3';
+import { Game, PlayerAI, Player, Dice, GameContext } from '../game.v4';
+// import { Game, PlayerAI, Player, Dice, GameContext } from '../game.v3';
 // import { ContextGame, ContextRound, ContextStep, Player } from '../game.v2';
 
 @Component({
@@ -93,16 +94,24 @@ export class GameHeroesComponent implements OnInit {
       context.setFirstPlayer(firstPlayer);
       context.setSecondPlayer(secondPlayer);
       let game = new Game(context, dice);
+
       let i = 0;
       context.onChange$.subscribe({
-        next: (v) => {this.historyIndex = this.maxHistoryIndex = i++; this.historyContext.set(this.maxHistoryIndex, v); console.log(v.state, v)}
+        next: (v) => {
+          this.historyIndex = this.maxHistoryIndex = i;
+          this.historyContext.set(this.maxHistoryIndex, v);
+          this.context = v;
+          // console.log(v.state.name, v);
+          i++;
+        }
       });
-      let playerEventHandler = {
+
+      let gamePlayerEventHandler = {
         next: (v) => {
           if (v == null) { // пропустить начальное значение
             return;
           }
-          console.log(v);
+          // console.log(v);
           switch (v.name) {
             case 'rolledSpeed':
               console.log('rolledSpeed: ' + v.roll);
@@ -122,7 +131,7 @@ export class GameHeroesComponent implements OnInit {
               break;
             case 'rolledRecovery':
               console.log('rolledRecovery: ' + v.roll);
-              // game.onRolledRecoveryHandler(v.roll, v.player);
+              game.onRolledRecoveryHandler(v.roll, v.player);
               break;
             default:
               console.warn("event not support: " + v.name);
@@ -130,8 +139,49 @@ export class GameHeroesComponent implements OnInit {
           }
         }
       };
-      firstPlayer.onRolledDice$.subscribe(playerEventHandler);
-      secondPlayer.onRolledDice$.subscribe(playerEventHandler);
+      firstPlayer.onRolledDice$.subscribe(gamePlayerEventHandler);
+      secondPlayer.onRolledDice$.subscribe(gamePlayerEventHandler);
+
+      let playerGameEventHandler = (player) => {
+        return {
+          next: (v) => {
+            if (v == null) { // пропустить начальное значение
+              return;
+            }
+            if (player !== v.player) {
+              return;
+            }
+            switch (v.name) {
+              case 'rollSpeed':
+                // console.log('rollSpeed', player);
+                player.rollSpeed();
+                break;
+              case 'rollAttack':
+                // console.log('rollAttack', player);
+                player.rollAttack();
+                break;
+              case 'rollDefence':
+                // console.log('rollDefence', player);
+                player.rollDefence();
+                break;
+              case 'chooseDamageSet':
+                // console.log('chooseDamageSet', player);
+                player.chooseDamageSet(v.damage);
+                break;
+              case 'rollRecovery':
+                // console.log('rollRecovery', player);
+                player.rollRecovery();
+                break;
+              default:
+                console.warn("event not support: " + v.name);
+                break;
+            }
+          }
+        }
+      }
+      game.onPlayerEvent$.subscribe(playerGameEventHandler(firstPlayer));
+      game.onPlayerEvent$.subscribe(playerGameEventHandler(secondPlayer));
+
       game.flow();
     } else {
       console.log('errors')

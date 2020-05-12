@@ -1,12 +1,12 @@
 <div *ngIf="context !== null" fxLayout="column" gdGap="8px" fxLayoutAlign="stretch">
     <div fxFlex fxFlexAlign="center">
         <h3>Round {{ context.round }}</h3>
-        <h3>Round {{ context.state }}</h3>
+        <h3>Round {{ context.state.name }}</h3>
     </div>
     <div fxFlex fxFlexAlign="center">
         <div fxLayout="row">
             <mat-card fxFlex role='player' [style]="getStyleCard(0, context.getFirstPlayer())">
-                <mat-card-title>{{ context.getFirstPlayer().hero.name }}</mat-card-title>
+                <mat-card-title>{{ context.getFirstPlayer()?.hero.name }}</mat-card-title>
                 <mat-card-content>
                     <p>[a:{{ context.getFirstPlayer()?.currentAttack }}, 
                         d:{{ context.getFirstPlayer()?.currentDefence }}, 
@@ -20,7 +20,7 @@
                 </mat-card-actions> -->
             </mat-card>
             <mat-card fxFlex role='player' [style]="getStyleCard(1, context.getSecondPlayer())">
-                <mat-card-title>{{ context.getSecondPlayer().hero.name }}</mat-card-title>
+                <mat-card-title>{{ context.getSecondPlayer()?.hero.name }}</mat-card-title>
                 <mat-card-content>
                     <p>[a:{{ context.getSecondPlayer()?.currentAttack }}, 
                         d:{{ context.getSecondPlayer()?.currentDefence }}, 
@@ -41,9 +41,7 @@
                 <p>defence: [{{ context.rollDefence }}]</p>
                 <p>damage: [{{ context.damage }}]</p>
                 <p>damageSet: [{{ context.damageSet }}]</p>
-                <p *ngIf="context.rollsRecovery">
-                    recovery: [<span *ngFor="let rollRecovery of context.rollsRecovery; let i=index">{{ i == 0 ? rollRecovery : "," + rollRecovery }}</span>]
-                </p>
+                <p>recovery: {{ context.rollRecovery }}</p>
                 <p>winer: {{ context.winerPlayerIndex }}</p>
                 <p>looser: {{ context.loserPlayerIndex }}</p>
             </mat-card-content>
