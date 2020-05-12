@@ -2,27 +2,30 @@ import { BehaviorSubject } from 'rxjs';
 import { Hero } from './hero';
 import { cloneDeep as lodashClonedeep } from 'lodash';
 
+// Bugs:
+
 interface PlayerI
 {
     isWin;
-    
-    getHits(): number;
-    takeDamage(damages);
-    recovery(roll);
-    isNeedRecovery(): boolean;
+    lastEvent;
 
-    rollSpeed();
-    rollAttack();
-    rollDefence();
-    rollRecovery();
-    chooseDamageSet(damageSet: string[]);
+    getHits(): number;
+    takeDamage(damages: string[]): void;
+    recovery(roll: number[]): void;
+    isNeedRecovery(): boolean;
+    rollSpeed(): void;
+    rollAttack(): void;
+    rollDefence(): void;
+    rollRecovery(): void;
+    chooseDamageSet(damage: number): void;
     getEventEmiter(): BehaviorSubject<any>;
+    setLastEvent(event);
 }
 
 class Player implements PlayerI
 {
     hero: Hero;
-    dice: Dice; // создаются одинаковые для игрока и игры
+    dice: Dice;
     currentAttack: number;
     currentDefence: number;
     currentSpeed: number;
@@ -30,6 +33,7 @@ class Player implements PlayerI
     isDie: boolean;
     isWin: boolean;
     onRolledDice$: BehaviorSubject<any>;
+    lastEvent: string;
     
     constructor(hero: Hero, dice: Dice = new Dice(1, 6)) {
         this.hero = hero;
@@ -41,6 +45,11 @@ class Player implements PlayerI
         this.needRecovery = 0;
         this.dice = dice;
         this.onRolledDice$ = new BehaviorSubject(null);
+        this.lastEvent = '';
+    }
+
+    setLastEvent(event) {
+        this.lastEvent = event;
     }
 
     getEventEmiter(): BehaviorSubject<any> {
@@ -71,14 +80,6 @@ class Player implements PlayerI
         });
     }
     
-    chooseDamageSet(damage) {
-        this.onRolledDice$.next({
-            name: 'choosedDamageSet',
-            damageSet: [],
-            player: this
-        });
-    }
-    
     rollRecovery(): void {
         this.onRolledDice$.next({
             name: 'rolledRecovery',
@@ -92,13 +93,51 @@ class Player implements PlayerI
             return sum + current;
         }, 0);
 
-        // правила для 1d6
         if (value >= 5) {
             this.needRecovery--;
         } else if (value <= 2) {
             this.isDie = true;
         }
         return this;
+    }
+
+    chooseDamageSet(damage: number): void {
+        let damageSet = this.generateDamageSet(damage);
+        if (damageSet == []) {
+            throw new Error("empty damage set: d=" + damage + " ds=" + damageSet);
+        }
+        this.onRolledDice$.next({
+            name: 'choosedDamageSet',
+            damageSet: damageSet,
+            player: this
+        });
+    }
+
+    generateDamageSet(damage: number): string[] {
+        // TODO: добавить решаюшее дерево для AI
+        let takeDamage = [];
+        if (damage > this.getHits()) {
+            damage = this.getHits();
+        }
+        let currentDices = [this.currentAttack, this.currentDefence, this.currentSpeed];
+        let attrs = ['attack', 'defence', 'speed'];
+        while(damage > 0) {
+            let sum = currentDices.reduce(function(sum, current) {
+                return sum + current;
+            }, 0)
+            while(true) {
+                let rand = Math.floor(Math.random() * 3);
+                let canLost = this.canLostDiceRule(currentDices[rand], sum);
+                if (canLost) {
+                    takeDamage.push(attrs[rand]);
+                    currentDices[rand]--;
+                    break;
+                }
+            }
+            damage--;
+        }
+        console.log(damage, takeDamage);
+        return takeDamage;
     }
 
     isNeedRecovery() {
@@ -162,77 +201,9 @@ class Player implements PlayerI
     }
 }
 
-class PlayerAI extends Player implements PlayerI
+export class PlayerAI extends Player implements PlayerI
 {
-    rollAttack(): void {
-        this.onRolledDice$.next({
-            name: 'rolledAttack',
-            roll: this.roll(this.dice, this.currentAttack),
-            player: this
-        });
-    }
-
-    rollDefence(): void {
-        this.onRolledDice$.next({
-            name: 'rolledDefence',
-            roll: this.roll(this.dice, this.currentDefence),
-            player: this
-        });
-    }
-
-    rollSpeed(): void {
-        this.onRolledDice$.next({
-            name: 'rolledSpeed',
-            roll: this.roll(this.dice, this.currentSpeed),
-            player: this
-        });
-    }
     
-    rollRecovery(): void {
-        this.onRolledDice$.next({
-            name: 'rolledRecovery',
-            roll: this.roll(this.dice),
-            player: this
-        });
-    }
-
-    chooseDamageSet(damage) {
-        let damageSet = this.generateDamageSet(damage);
-        if (damageSet == []) {
-            throw new Error("empty damage set: d=" + damage + " ds=" + damageSet);
-        }
-        this.onRolledDice$.next({
-            name: 'choosedDamageSet',
-            damageSet: this.generateDamageSet(damage),
-            player: this
-        });
-    }
-
-    generateDamageSet(damage: number): string[] {
-        // TODO: добавить решаюшее дерево для AI
-        let takeDamage = [];
-        if (damage > this.getHits()) {
-            damage = this.getHits();
-        }
-        let currentDices = [this.currentAttack, this.currentDefence, this.currentSpeed];
-        let attrs = ['attack', 'defence', 'speed'];
-        while(damage > 0) {
-            let sum = currentDices.reduce(function(sum, current) {
-                return sum + current;
-            }, 0)
-            while(true) {
-                let rand = Math.floor(Math.random() * 3);
-                let canLost = this.canLostDiceRule(currentDices[rand], sum);
-                if (canLost) {
-                    takeDamage.push(attrs[rand]);
-                    currentDices[rand]--;
-                    break;
-                }
-            }
-            damage--;
-        }
-        return takeDamage;
-    }
 }
 
 class Dice
@@ -289,7 +260,7 @@ class BaseState
         this.context.onGameEvent$.next(event);
     }
 }
-// лишний
+
 class StartGame extends BaseState implements GameState
 {
     static NAME = 'StartGame';
@@ -436,8 +407,13 @@ class WaitRolledAttackAndDefence extends BaseState implements GameState
             console.warn(event.name + " not in ['rolledAttack', 'rolledDefence']");
             return;
         }
-        this.context.addAttackRoll(event.roll, event.player);
-        this.context.addDefenceRoll(event.roll, event.player);
+        if (event.name === 'rolledAttack') {
+            this.context.addAttackRoll(event.roll, event.player);
+            this.onChangeState();
+        } else if (event.name === 'rolledDefence') {
+            this.context.addDefenceRoll(event.roll, event.player);
+            this.onChangeState();
+        }
         this.next();
     }
 }
@@ -487,21 +463,28 @@ class WaitChoosedDamage extends BaseState implements GameState
     name = 'WaitChoosedDamage';
 
     next() {
-        console.log("WaitChoosedDamage");
-        // TODO: добавить условие если задано
-        this.context.state = new ChoosedDamage(this.context);
-        this.onChangeState();
-        return true;
+        if (this.context.damageSet) {
+            this.context.state = new ChoosedDamage(this.context);
+            this.onChangeState();
+            return true;
+        }
+        return false;
     }
 
     handle(event) {
         if (event.name !== 'choosedDamageSet') {
             console.warn(event.name + " != " + 'choosedDamageSet');
             return;
-        } else {
+        } else if (this.isValid(event.damageSet, event.player)) {
             this.context.addDamageSet(event.damageSet, event.player);
             this.next();
         }
+    }
+
+    isValid(damageSet, player): boolean {
+        let isValidDamageSet = this.context.damage === damageSet.length;
+        let isValidPlayer = this.context.getDefencePlayer() === player;
+        return isValidDamageSet && isValidPlayer;
     }
 }
 class ChoosedDamage extends BaseState implements GameState
@@ -552,6 +535,7 @@ class RollRecovery extends BaseState implements GameState
     name = 'RollRecovery';
 
     next() {
+        this.context.resetRecoveryRoll();
         this.context.state = new WaitRolledRecovery(this.context);
         this.onChangeState();
         this.emit({
@@ -567,19 +551,27 @@ class WaitRolledRecovery extends BaseState implements GameState
     name = 'WaitRolledRecovery';
 
     next() {
-        this.context.state = new RolledRecovery(this.context);
-        this.onChangeState();
-        return true;
+        if (this.context.rollRecovery) {
+            this.context.state = new RolledRecovery(this.context);
+            this.onChangeState();
+            return true;
+        }
     }
 
     handle(event) {
         if (event.name !== 'rolledRecovery') {
             console.warn(event.name + " != " + 'rolledRecovery');
             return;
-        } else {
+        } else if (this.isValid(event.roll, event.player)) {
             this.context.addRecoveryRoll(event.roll, event.player);
             this.next();
         }
+    }
+
+    isValid(roll, player): boolean {
+        let isValidRoll = roll.length === 1 && roll[0] <= 6 && roll[0] >= 1;
+        let isValidPlayer = player === this.context.getLooserPlayer();
+        return isValidRoll && isValidPlayer;
     }
 }
 class RolledRecovery extends BaseState implements GameState
@@ -612,9 +604,6 @@ class EndGame extends BaseState implements GameState
     }
 }
 
-// TODO: Выпадает ошибка на невозможность снять повреждения. 
-// Возможно неправильно определяется игрок которому надо снимать повреждения, 
-// либо не тот игрок отправляется при запросе на выбор повреждение
 class GameContext
 {
     static readonly FIRST_PLAYER = 0;
@@ -660,14 +649,6 @@ class GameContext
         return this.rollAttack !== null && this.rollDefence !== null;
     }
 
-    isFirstPlayerAction(): boolean {
-        return this.stepPlayerIndex == this.firstPlayerIndex;
-    }
-
-    isSecondPlayerAction(): boolean {
-        return this.stepPlayerIndex == this.secondPlayerIndex;
-    }
-
     isEndGame(): boolean {
         return !(this.getFirstPlayer().getHits() > 2 && this.getSecondPlayer().getHits() > 2);
     }
@@ -684,12 +665,15 @@ class GameContext
         if (this.players.has(GameContext.FIRST_PLAYER)) {
             console.warn("первый игрок был заменён");
         }
-        player.storeGameId = GameContext.FIRST_PLAYER;
         this.players.set(GameContext.FIRST_PLAYER, player);
     }
 
     getFirstPlayer() {
         return this.players.get(GameContext.FIRST_PLAYER);
+    }
+
+    getFirstPlayerBySpeed() {
+        return this.players.get(this.firstPlayerIndex);
     }
 
     getFirstSpeedValue() {
@@ -700,7 +684,6 @@ class GameContext
         if (this.players.has(GameContext.SECOND_PLAYER)) {
             console.warn("второй игрок был заменён");
         }
-        player.storeGameId = GameContext.SECOND_PLAYER;
         this.players.set(GameContext.SECOND_PLAYER, player);
     };
 
@@ -708,27 +691,27 @@ class GameContext
         return this.players.get(GameContext.SECOND_PLAYER);
     }
 
+    getSecondPlayerBySpeed() {
+        return this.players.get(this.secondPlayerIndex);
+    }
+
     getSecondSpeedValue() {
         return this.rollsSpeedValue.get(GameContext.SECOND_PLAYER);
     }
 
-    getLooserPlayer() {
-        return this.players.get(this.loserPlayerIndex);
-    }
-
     getAttackPlayer() {
         if (this.isFirstPlayerAction()) {
-            return this.getFirstPlayer();
+            return this.getFirstPlayerBySpeed();
         } else {
-            return this.getSecondPlayer();
+            return this.getSecondPlayerBySpeed();
         }
     }
 
     getDefencePlayer() {
         if (this.isFirstPlayerAction()) {
-            return this.getSecondPlayer();
+            return this.getSecondPlayerBySpeed();
         } else {
-            return this.getFirstPlayer();
+            return this.getFirstPlayerBySpeed();
         }
     }
 
@@ -767,6 +750,10 @@ class GameContext
         this.rollsSpeedValue = new Map();
     }
 
+    resetRecoveryRoll() {
+        this.rollRecovery = null;
+    }
+
     chooseFirstPlayer() {
         if (this.getFirstSpeedValue() >= this.getSecondSpeedValue()) {
             this.firstPlayer = lodashClonedeep(this.getFirstPlayer());
@@ -782,11 +769,11 @@ class GameContext
     }
 
     initFirstStep() {
-        this.setStep(this.firstPlayerIndex)
+        this.setStep(this.firstPlayerIndex);
     }
 
     initSecondStep() {
-        this.setStep(this.secondPlayerIndex)
+        this.setStep(this.secondPlayerIndex);
     }
 
     private setStep(playerKey) {
@@ -797,75 +784,67 @@ class GameContext
         this.damageSet = null;
     }
 
+    isFirstPlayerAction(): boolean {
+        return this.stepPlayerIndex === this.firstPlayerIndex;
+    }
+
+    isSecondPlayerAction(): boolean {
+        return this.stepPlayerIndex === this.secondPlayerIndex;
+    }
+
     addAttackRoll(roll, player: PlayerI) {
-        for (const [index, playerFromContext] of this.players) {
-            if (player === playerFromContext && index === this.stepPlayerIndex) {
-                this.rollAttack = roll;
-            }
+        if (player === this.getAttackPlayer()) {
+            this.rollAttack = roll;
         }
     }
 
     addDefenceRoll(roll, player: PlayerI) {
-        for (const [index, playerFromContext] of this.players) {
-            if (player === playerFromContext && index !== this.stepPlayerIndex) {
-                this.rollDefence = roll;
-            }
+        if (player === this.getDefencePlayer()) {
+            this.rollDefence = roll;
         }
     }
 
     calculateDamage(): void {
-        // Если пул кубиков защиты меньше пула атаки надо добавить дефолтные кубики на 2
         this.rollAttack.sort((a: number, b: number) => b - a);
         this.rollDefence.sort((a: number, b: number) => b - a);
-        let diffCountDices = this.rollAttack.length - this.rollDefence.length;
-        let defence = lodashClonedeep(this.rollDefence); // TODO: найти клонирование полегче
-        if (diffCountDices > 0) {
-            for (let index = 0; index < diffCountDices; index++) {
-                defence.push(2);
-            }
-        }
         let damage = 0;
         for (let index = 0; index < this.rollAttack.length; index++) {
-            if (this.rollAttack[index] > defence[index]) {
+            if (this.rollDefence[index] === undefined && this.rollAttack[index] > 2) {
+                damage++;
+            } else if (this.rollAttack[index] > this.rollDefence[index]) {
                 damage++;
             }
         }
         this.damage = damage;
     }
 
-    addDamageSet(damageSet, player) { // TODO: можно по индексу в зависимости от раунда добавить?
-        for (const [index, playerFromContext] of this.players) {
-            if (player == playerFromContext) {
-                this.damageSet = damageSet;
-            }
+    addDamageSet(damageSet, player) {
+        if (this.getDefencePlayer() === player) {
+            this.damageSet = damageSet;
         }
     }
 
     takeDamage() {
-        if (this.isFirstPlayerAction()) {
-            this.players.get(this.secondPlayerIndex).takeDamage(this.damageSet);
-        } else {
-            this.players.get(this.firstPlayerIndex).takeDamage(this.damageSet);
-        }
+        this.getDefencePlayer().takeDamage(this.damageSet);
     }
-
-    addRecoveryRoll(roll, player) { // TODO: можно по индексу в зависимости от раунда добавить?
-        for (const [index, playerFromContext] of this.players) {
-            if (player == playerFromContext) {
-                this.rollRecovery = roll;
-            }
-        }
-    }
-
+    
     changeWiner() {
         if (this.getFirstPlayer().getHits() > 2) {
             this.winerPlayerIndex = GameContext.FIRST_PLAYER;
             this.loserPlayerIndex = GameContext.SECOND_PLAYER;
-            this.getFirstPlayer().isWin = true;
         } else {
             this.winerPlayerIndex = GameContext.SECOND_PLAYER;
             this.loserPlayerIndex = GameContext.FIRST_PLAYER;
-            this.getSecondPlayer().isWin = true;
+        }
+    }
+
+    getLooserPlayer() {
+        return this.players.get(this.loserPlayerIndex);
+    }
+
+    addRecoveryRoll(roll, player) {
+        if (this.getLooserPlayer() === player) {
+            this.rollRecovery = roll;
         }
     }
 }
@@ -902,6 +881,8 @@ export class GameHandler
     dice: Dice;
     firstPlayerAdded = false;
     secondPlayerAdded = false;
+    alarmExit = false;
+    delay = 2000;
 
     constructor() {
         this.context = new GameContext();
@@ -917,19 +898,24 @@ export class GameHandler
             console.warn("назначьте второго игрока")
             return
         }
-        let intervalId;
-        intervalId = setInterval((intervalId) => {
-            try {
-                this.context.state.next();
-                if (this.context.state.name == EndGame.NAME) {
-                    clearInterval(intervalId);
-                    return this.context;
-                }
-            } catch (error) {
-                clearInterval(intervalId);
+        let self = this;
+        setTimeout(function cycle() {
+            if (self.alarmExit) {
+                console.warn("выход по прерыванию...");
+                return;
             }
-            
-        }, 1000);
+            if (self.context.state.name == EndGame.NAME) {
+                return self;
+            }
+            console.log('listen...');
+            self.context.state.next();
+            setTimeout(cycle, self.delay)
+        }, self.delay)
+        // подписаться на выключение через кнопку
+    }
+
+    endGame() {
+        
     }
 
     getOnContextEmiter() { // испускает события по смене контекста
@@ -940,7 +926,7 @@ export class GameHandler
         return this.context.onGameEvent$;
     }
 
-    addFirstPlayer(isManual: boolean, hero: Hero) {
+    addFirstPlayer(isManual: boolean, hero: Hero): PlayerI {
         if (this.firstPlayerAdded) {
             console.warn("первый игрок уже добавлен");
             return
@@ -950,7 +936,12 @@ export class GameHandler
         this.firstPlayerAdded = true;
         // Подписка
         player.getEventEmiter().subscribe(this.getPlayerEventHandler());
-        this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
+        if (isManual) { // если игрок компьютер то подписываемся игрой на его действия
+            this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
+        } else {
+            this.getOnPlayerEmiter().subscribe(this.getAIGameEventHandler(player));
+        }
+        return player;
     }
 
     addSecondPlayer(isManual: boolean, hero: Hero) {
@@ -963,7 +954,12 @@ export class GameHandler
         this.secondPlayerAdded = true;
         // Подписка
         player.getEventEmiter().subscribe(this.getPlayerEventHandler());
-        this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
+        if (isManual) {
+            this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
+        } else {
+            this.getOnPlayerEmiter().subscribe(this.getAIGameEventHandler(player));
+        }
+        return player;
     }
 
     playerFactory(isManual, hero, dice) {
@@ -986,7 +982,7 @@ export class GameHandler
         }
     }
 
-    getGameEventHandler(player) { // для AI это будет автогенерация событий, для игрока сообщение в интерфейс, сейчас это вызов метода
+    getAIGameEventHandler(player) {
         return {
             next: (v) => {
                 if (v == null) { // пропустить начальное значение
@@ -1016,6 +1012,21 @@ export class GameHandler
                         console.warn("event not support: " + v.name);
                         break;
                 }
+            }
+        }
+    }
+
+    getGameEventHandler(player: PlayerI) {
+        return {
+            next: (v) => {
+                if (v == null) { // пропустить начальное значение
+                    return;
+                }
+                if (player !== v.player) {
+                    return;
+                }
+                console.log('fromGameEvent: ', v);
+                player.setLastEvent(v);
             }
         }
     }

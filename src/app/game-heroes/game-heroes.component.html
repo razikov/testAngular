@@ -51,8 +51,9 @@
         </ul>
         <button mat-stroked-button color="primary" (click)="prevHistory()">prew</button>
         <button mat-stroked-button color="primary" (click)="nextHistory()">next</button>
+        <button mat-stroked-button color="warn" (click)="alarmExit()">exit</button><input #delay (change)="setGameDelay(delay.value)" [value]="gameHandler.delay">
         <p>{{ historyIndex }}/{{ maxHistoryIndex }}</p>
-        <app-game-player [context]="context"></app-game-player>
+        <app-game-player [context]="context" [firstPlayer]="firstPlayer" [secondPlayer]="secondPlayer"></app-game-player>
         <!-- <app-game-round [rounds]="context.rounds"></app-game-round> -->
     </div>
 </div>

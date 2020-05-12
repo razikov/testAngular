@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { PlayerAI } from '../game.v4';
 
 @Component({
   selector: 'app-game-player',
@@ -7,6 +8,8 @@ import { Component, Input, OnInit } from '@angular/core';
 })
 export class GamePlayerComponent implements OnInit {
   @Input() context;
+  @Input() firstPlayer;
+  @Input() secondPlayer;
 
   constructor() { }
 
@@ -28,4 +31,7 @@ export class GamePlayerComponent implements OnInit {
     return style;
   }
 
+  playerIsHuman(player) {
+    return !(player instanceof PlayerAI);
+  }
 }

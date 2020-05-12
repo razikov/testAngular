@@ -1,7 +1,7 @@
 <div *ngIf="context !== null" fxLayout="column" gdGap="8px" fxLayoutAlign="stretch">
     <div fxFlex fxFlexAlign="center">
         <h3>Round {{ context.round }}</h3>
-        <h3>Round {{ context.state.name }}</h3>
+        <h3>State {{ context.state.name }}</h3>
     </div>
     <div fxFlex fxFlexAlign="center">
         <div fxLayout="row">
@@ -13,11 +13,27 @@
                         s:{{ context.getFirstPlayer()?.currentSpeed }} ]</p>
                     <p>speed: [{{ context.rollsSpeed?.get(0) }}] sum={{ context.rollsSpeedValue?.get(0) }}</p>
                 </mat-card-content>
-                <!-- <mat-card-actions>
-                    <a mat-icon-button [title]="hero.name + ' details'" routerLink="/hero-details/{{hero.id}}">
-                        <mat-icon>edit</mat-icon>
-                    </a>
-                </mat-card-actions> -->
+                <mat-card-actions *ngIf="playerIsHuman(firstPlayer)">
+                    <p>last event: {{ firstPlayer.lastEvent?.name }}</p>
+                    <button mat-button (click)="firstPlayer.rollSpeed()">rollSpeed</button>
+                    <button mat-button (click)="firstPlayer.rollAttack()">rollAttack</button>
+                    <button mat-button (click)="firstPlayer.rollDefence()">rollDefence</button>
+                    <button mat-button (click)="firstPlayer.rollRecovery()">rollRecovery</button>
+                    <button mat-button (click)="firstPlayer.chooseDamageSet(firstPlayer.lastEvent?.damage)">chooseDamage</button>
+                </mat-card-actions>
+            </mat-card>
+            <mat-card fxFlex [style]="'margin: 8px; min-width:400px;'">
+                <mat-card-title>State game</mat-card-title>
+                <mat-card-content>
+                    <p>step: {{ context.stepPlayerIndex }}</p>
+                    <p>attack: [{{ context.rollAttack }}]</p>
+                    <p>defence: [{{ context.rollDefence }}]</p>
+                    <p>damage: [{{ context.damage }}]</p>
+                    <p>damageSet: [{{ context.damageSet }}]</p>
+                    <p>recovery: {{ context.rollRecovery }}</p>
+                    <p>winer: {{ context.winerPlayerIndex }}</p>
+                    <p>looser: {{ context.loserPlayerIndex }}</p>
+                </mat-card-content>
             </mat-card>
             <mat-card fxFlex role='player' [style]="getStyleCard(1, context.getSecondPlayer())">
                 <mat-card-title>{{ context.getSecondPlayer()?.hero.name }}</mat-card-title>
@@ -27,24 +43,16 @@
                         s:{{ context.getSecondPlayer()?.currentSpeed }} ]</p>
                     <p>speed: [{{ context.rollsSpeed?.get(1) }}] sum={{ context.rollsSpeedValue?.get(1) }}</p>
                 </mat-card-content>
-                <!-- <mat-card-actions>
-                    <a mat-icon-button [title]="hero.name + ' details'" routerLink="/hero-details/{{hero.id}}">
-                        <mat-icon>edit</mat-icon>
-                    </a>
-                </mat-card-actions> -->
+                <mat-card-actions *ngIf="playerIsHuman(secondPlayer)">
+                    <p>last event: {{ secondPlayer.lastEvent?.name }}</p>
+                    <button mat-button (click)="secondPlayer.rollSpeed()">rollSpeed</button>
+                    <button mat-button (click)="secondPlayer.rollAttack()">rollAttack</button>
+                    <button mat-button (click)="secondPlayer.rollDefence()">rollDefence</button>
+                    <button mat-button (click)="secondPlayer.rollRecovery()">rollRecovery</button>
+                    <button mat-button (click)="secondPlayer.chooseDamageSet(secondPlayer.lastEvent?.damage)">chooseDamage</button>
+                </mat-card-actions>
             </mat-card>
         </div>
-        <mat-card fxFlex [style]="'margin: 8px; min-width:400px;'">
-            <mat-card-title>step: {{ context.stepPlayerIndex }}</mat-card-title>
-            <mat-card-content>
-                <p>attack: [{{ context.rollAttack }}]</p>
-                <p>defence: [{{ context.rollDefence }}]</p>
-                <p>damage: [{{ context.damage }}]</p>
-                <p>damageSet: [{{ context.damageSet }}]</p>
-                <p>recovery: {{ context.rollRecovery }}</p>
-                <p>winer: {{ context.winerPlayerIndex }}</p>
-                <p>looser: {{ context.loserPlayerIndex }}</p>
-            </mat-card-content>
-        </mat-card>
+        
     </div>
 </div>

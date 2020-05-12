@@ -18,6 +18,9 @@ export class GameHeroesComponent implements OnInit {
   secondChangeHero = null;
   errors = [];
   heroes: Hero[];
+  firstPlayer;
+  secondPlayer;
+  gameHandler: GameHandler;
 
   context = null;
   historyContext = new Map();
@@ -27,7 +30,7 @@ export class GameHeroesComponent implements OnInit {
   constructor(
     private heroService: HeroService,
   ) {
-
+    this.gameHandler = new GameHandler();
   }
 
   ngOnInit(): void {
@@ -77,12 +80,20 @@ export class GameHeroesComponent implements OnInit {
     this.context = this.historyContext.get(this.historyIndex);
   }
 
+  alarmExit() {
+    this.gameHandler.alarmExit = true;
+  }
+
+  setGameDelay(value) {
+    this.gameHandler.delay = parseInt(value);
+  }
+
   game() {
     if (this.validateGame()) {
       let i = 0;
-      let game = new GameHandler();
-      game.addFirstPlayer(this.firstManual, this.firstChangeHero);
-      game.addSecondPlayer(this.secondManual, this.secondChangeHero);
+      let game = this.gameHandler;
+      this.firstPlayer = game.addFirstPlayer(this.firstManual, this.firstChangeHero);
+      this.secondPlayer = game.addSecondPlayer(this.secondManual, this.secondChangeHero);
       game.context.onChangeEvent$.subscribe({
         next: (v) => {
           if (v == null) {
