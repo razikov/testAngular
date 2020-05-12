@@ -1,11 +1,9 @@
 import { BehaviorSubject } from 'rxjs';
 import { Hero } from './hero';
 import { cloneDeep as lodashClonedeep } from 'lodash';
-import { CONTEXT_NAME } from '@angular/compiler/src/render3/view/util';
 
 interface PlayerI
 {
-    onRolledDice$: BehaviorSubject<any>;
     isWin: boolean;// del
 
     getHits(): number;
@@ -18,6 +16,7 @@ interface PlayerI
     rollDefence();
     rollRecovery();
     chooseDamageSet(damageSet: string[]);
+    getEventEmiter(): BehaviorSubject<any>;
 }
 
 export class Player implements PlayerI
@@ -42,6 +41,10 @@ export class Player implements PlayerI
         this.needRecovery = 0;
         this.dice = dice;
         this.onRolledDice$ = new BehaviorSubject(null);
+    }
+
+    getEventEmiter(): BehaviorSubject<any> {
+        return this.onRolledDice$;
     }
 
     rollAttack(): void {
@@ -248,28 +251,55 @@ export class Dice
     }
 }
 
+// TODO:
+// выбор в пользу бросков игрока не очень удачно, событие можно сгенерировать вручную, лучше обмениваться сообщениями вида:
+// game -> event {name: 'rollSpeed', player: player}; player -> event {name: 'rolledSpeed', player: player}
+// а сейчас
+// game -> event {name: 'rollSpeed', player: player}; player -> event {name: 'rolledSpeed', roll: roll, player: player}
+// исчезнет зависимость игрока от кубика и возможно получится достать из игрока игровую логику
+
 interface GameState
 {
     name: string;
     context: GameContext;
 
-    next();
+    next(): boolean;
+    handle(event: any): void; // обрабатывает события игроков
 }
+
 class BaseState
 {
+    static NAME = 'BaseState';
+    name = 'BaseState';
     context: GameContext;
 
     constructor(context) {
         this.context = context;
     }
+
+    handle(event: any) {
+        console.warn("can't handle event: ", event, "; in: ", this.name);
+    }
+
+    onChangeState(): void {
+        this.context.onChangeEvent$.next(lodashClonedeep(this.context));
+    }
+
+    protected emit(event: any) {
+        this.context.onGameEvent$.next(event);
+    }
 }
+// лишний
 class StartGame extends BaseState implements GameState
 {
     static NAME = 'StartGame';
     name = 'StartGame';
 
     next() {
+        console.log('onStartGame');
         this.context.state = new StartRound(this.context);
+        this.onChangeState();
+        return true;
     }
 }
 class StartRound extends BaseState implements GameState
@@ -280,6 +310,8 @@ class StartRound extends BaseState implements GameState
     next() {
         this.context.startRound();
         this.context.state = new RollSpeed(this.context);
+        this.onChangeState();
+        return true;
     }
 }
 class RollSpeed extends BaseState implements GameState
@@ -288,8 +320,18 @@ class RollSpeed extends BaseState implements GameState
     name = 'RollSpeed';
 
     next() {
+        // TODO: как повторно испустить события на броски кубиков для игрока который кубики не кинул через время ожидания?
+        // NOTE: сначало меняем состояние на случай если событие обработается раньше чем мы будем ожидать его
         this.context.resetSpeedRoll()
         this.context.state = new WaitRolledSpeed(this.context);
+        this.onChangeState();
+        for (const [index, player] of this.context.players) {
+            this.emit({
+                name: 'rollSpeed',
+                player: player,
+            })
+        }
+        return true;
     }
 }
 class WaitRolledSpeed extends BaseState implements GameState
@@ -300,6 +342,20 @@ class WaitRolledSpeed extends BaseState implements GameState
     next() {
         if (this.context.hasRolledSpeed()) {
             this.context.state = new RolledSpeed(this.context);
+            this.onChangeState();
+            return true;
+        }
+        return false
+    }
+
+    handle(event) {
+        if (event.name !== 'rolledSpeed') {
+            console.warn(event.name + " != rolledSpeed");
+            return;
+        } else {
+            this.context.addSpeedRoll(event.roll, event.player);
+            this.next();
+            return;
         }
     }
 }
@@ -311,9 +367,14 @@ class RolledSpeed extends BaseState implements GameState
     next() {
         if (this.context.hasEqualRolledSpeed()) {
             this.context.state = new RollSpeed(this.context);
+            this.onChangeState();
+            return true;
+        } else {
+            this.context.chooseFirstPlayer();
+            this.context.state = new ActionsFirstPlayer(this.context);
+            this.onChangeState();
+            return true;
         }
-        this.context.chooseFirstPlayer();
-        this.context.state = new ActionsFirstPlayer(this.context);
     }
 }
 class ActionsFirstPlayer extends BaseState implements GameState
@@ -322,7 +383,18 @@ class ActionsFirstPlayer extends BaseState implements GameState
     name = 'ActionsFirstPlayer';
 
     next() {
+        this.context.initFirstStep()
         this.context.state = new WaitRolledAttackAndDefence(this.context);
+        this.onChangeState();
+        this.emit({
+            name: 'rollAttack',
+            player: this.context.getAttackPlayer(),
+        });
+        this.emit({
+            name: 'rollDefence',
+            player: this.context.getDefencePlayer(),
+        });
+        return true;
     }
 }
 class ActionsSecondPlayer extends BaseState implements GameState
@@ -331,7 +403,18 @@ class ActionsSecondPlayer extends BaseState implements GameState
     name = 'ActionsSecondPlayer';
 
     next() {
+        this.context.initSecondStep()
         this.context.state = new WaitRolledAttackAndDefence(this.context);
+        this.onChangeState();
+        this.emit({
+            name: 'rollAttack',
+            player: this.context.getAttackPlayer(),
+        });
+        this.emit({
+            name: 'rollDefence',
+            player: this.context.getDefencePlayer(),
+        });
+        return true;
     }
 }
 class WaitRolledAttackAndDefence extends BaseState implements GameState
@@ -342,7 +425,20 @@ class WaitRolledAttackAndDefence extends BaseState implements GameState
     next() {
         if (this.context.hasRolledAttackAndDefence()) {
             this.context.state = new RolledAttackAndDefence(this.context);
+            this.onChangeState();
+            return true;
         }
+        return false
+    }
+
+    handle(event) {
+        if (['rolledAttack', 'rolledDefence'].indexOf(event.name) === -1) {
+            console.warn(event.name + " not in ['rolledAttack', 'rolledDefence']");
+            return;
+        }
+        this.context.addAttackRoll(event.roll, event.player);
+        this.context.addDefenceRoll(event.roll, event.player);
+        this.next();
     }
 }
 class RolledAttackAndDefence extends BaseState implements GameState
@@ -354,10 +450,18 @@ class RolledAttackAndDefence extends BaseState implements GameState
         this.context.calculateDamage()
         if (this.context.damage > 0) {
             this.context.state = new ChooseDamage(this.context);
+            this.onChangeState();
+            return true;
         } else if (this.context.isFirstPlayerAction()) {
             this.context.state = new ActionsSecondPlayer(this.context);
+            this.onChangeState();
+            return true;
         } else if (this.context.isSecondPlayerAction()) {
             this.context.state = new StartRound(this.context);
+            this.onChangeState();
+            return true;
+        } else {
+            throw new Error("неожиданное состояние!");
         }
     }
 }
@@ -368,6 +472,13 @@ class ChooseDamage extends BaseState implements GameState
 
     next() {
         this.context.state = new WaitChoosedDamage(this.context);
+        this.onChangeState();
+        this.emit({
+            name: 'chooseDamageSet',
+            damage: this.context.damage,
+            player: this.context.getDefencePlayer(),
+        })
+        return true;
     }
 }
 class WaitChoosedDamage extends BaseState implements GameState
@@ -376,7 +487,21 @@ class WaitChoosedDamage extends BaseState implements GameState
     name = 'WaitChoosedDamage';
 
     next() {
+        console.log("WaitChoosedDamage");
+        // TODO: добавить условие если задано
         this.context.state = new ChoosedDamage(this.context);
+        this.onChangeState();
+        return true;
+    }
+
+    handle(event) {
+        if (event.name !== 'choosedDamageSet') {
+            console.warn(event.name + " != " + 'choosedDamageSet');
+            return;
+        } else {
+            this.context.addDamageSet(event.damageSet, event.player);
+            this.next();
+        }
     }
 }
 class ChoosedDamage extends BaseState implements GameState
@@ -388,10 +513,18 @@ class ChoosedDamage extends BaseState implements GameState
         this.context.takeDamage()
         if (this.context.isEndGame()) {
             this.context.state = new ChoosedWinner(this.context);
+            this.onChangeState();
+            return true;
         } else if (this.context.isFirstPlayerAction()) {
             this.context.state = new ActionsSecondPlayer(this.context);
+            this.onChangeState();
+            return true;
         } else if (this.context.isSecondPlayerAction()) {
             this.context.state = new StartRound(this.context);
+            this.onChangeState();
+            return true;
+        } else {
+            throw new Error("неожиданное состояние!")
         }
     }
 }
@@ -404,8 +537,12 @@ class ChoosedWinner extends BaseState implements GameState
         this.context.changeWiner()
         if (this.context.isNeedRecovery()) {
             this.context.state = new RollRecovery(this.context);
+            this.onChangeState();
+            return true;
         } else {
             this.context.state = new EndGame(this.context);
+            this.onChangeState();
+            return true;
         }
     }
 }
@@ -416,6 +553,12 @@ class RollRecovery extends BaseState implements GameState
 
     next() {
         this.context.state = new WaitRolledRecovery(this.context);
+        this.onChangeState();
+        this.emit({
+            name: 'rollRecovery',
+            player: this.context.getLooserPlayer(),
+        })
+        return true;
     }
 }
 class WaitRolledRecovery extends BaseState implements GameState
@@ -425,6 +568,18 @@ class WaitRolledRecovery extends BaseState implements GameState
 
     next() {
         this.context.state = new RolledRecovery(this.context);
+        this.onChangeState();
+        return true;
+    }
+
+    handle(event) {
+        if (event.name !== 'rolledRecovery') {
+            console.warn(event.name + " != " + 'rolledRecovery');
+            return;
+        } else {
+            this.context.addRecoveryRoll(event.roll, event.player);
+            this.next();
+        }
     }
 }
 class RolledRecovery extends BaseState implements GameState
@@ -436,8 +591,12 @@ class RolledRecovery extends BaseState implements GameState
         this.context.recovery()
         if (this.context.isNeedRecovery()) {
             this.context.state = new RollRecovery(this.context);
+            this.onChangeState();
+            return true;
         } else {
             this.context.state = new EndGame(this.context);
+            this.onChangeState();
+            return true;
         }
     }
 }
@@ -447,6 +606,8 @@ class EndGame extends BaseState implements GameState
     name = 'EndGame';
 
     next() {
+        // Разрушить событийные линии
+        return false;
         console.warn('наградить!')
     }
 }
@@ -456,7 +617,6 @@ export class GameContext
     static readonly FIRST_PLAYER = 0;
     static readonly SECOND_PLAYER = 1;
 
-    i: number = 0;
     state: GameState;
     players: Map<number, PlayerI>;
     round: number;
@@ -474,19 +634,15 @@ export class GameContext
     rollRecovery: number[];
     winerPlayerIndex: number; // ключ игрока
     loserPlayerIndex: number; // ключ игрока
-    onChange$: BehaviorSubject<GameContext>;
+    onGameEvent$: BehaviorSubject<any>; // испускает игровые события для игроков
+    onChangeEvent$: BehaviorSubject<GameContext>; // испускает события изменения контекста
 
     constructor() {
         this.state = new StartGame(this);
         this.players = new Map();
         this.round = 0;
-        this.onChange$ = new BehaviorSubject(this);
-        this.onChange$.next(lodashClonedeep(this));
-    }
-
-    next() {
-        this.state.next();
-        this.onChange$.next(lodashClonedeep(this));
+        this.onGameEvent$ = new BehaviorSubject(null);
+        this.onChangeEvent$ = new BehaviorSubject(null);
     }
 
     hasRolledSpeed(): boolean {
@@ -527,7 +683,6 @@ export class GameContext
         }
         player.storeGameId = GameContext.FIRST_PLAYER;
         this.players.set(GameContext.FIRST_PLAYER, player);
-        this.onChange$.next(lodashClonedeep(this));
     }
 
     getFirstPlayer() {
@@ -544,7 +699,6 @@ export class GameContext
         }
         player.storeGameId = GameContext.SECOND_PLAYER;
         this.players.set(GameContext.SECOND_PLAYER, player);
-        this.onChange$.next(lodashClonedeep(this));
     };
 
     getSecondPlayer() {
@@ -736,143 +890,129 @@ export class GameContext
 // за каждое полученное повреждение игрок обязан снять один любой кубик.
 // нельзя снимать последний кубик если возможно снять другие кубики.
 // 
+// механики к рассмотрению: 
+// 1) Тяжелые повреждения можно либо голосованием зрителей решать, либо отдавать на предпочтение победителю
 
-export class Game
+export class GameHandler
 {
-    dice: Dice;
-    state: string;
     context: GameContext;
-    onPlayerEvent$: BehaviorSubject<any>;
+    dice: Dice;
+    firstPlayerAdded = false;
+    secondPlayerAdded = false;
 
-    constructor(context: GameContext, dice: Dice = new Dice(1, 6)) {
-        this.dice = dice;
-        this.context = context;
-        this.onPlayerEvent$ = new BehaviorSubject(null);
+    constructor() {
+        this.context = new GameContext();
+        this.dice = new Dice(1,6);
     }
 
-    flow() {
-        switch (this.context.state.name) {
-            case StartGame.NAME:
-            case StartRound.NAME:
-            case RolledSpeed.NAME:
-            case RolledAttackAndDefence.NAME:
-            case ChoosedDamage.NAME:
-            case RolledRecovery.NAME:
-            case ChoosedWinner.NAME:
-                this.context.next()
-                this.flow();
-                break;
-            case WaitRolledSpeed.NAME:
-            case WaitRolledAttackAndDefence.NAME:
-            case WaitChoosedDamage.NAME:
-            case WaitRolledRecovery.NAME:
-                this.context.state.next()
-                break;
-            case RollSpeed.NAME:
-                this.context.next()
-                this.rollSpeed();
-                break;
-            case ActionsFirstPlayer.NAME:
-                this.context.initFirstStep()
-                this.context.next()
-                this.rollAttackAndDefence()
-                break;
-            case ActionsSecondPlayer.NAME:
-                this.context.initSecondStep()
-                this.context.next()
-                this.rollAttackAndDefence()
-                break;
-            case ChooseDamage.NAME:
-                this.context.next();
-                this.chooseDamageSet();
-                break;
-            case RollRecovery.NAME:
-                this.context.next()
-                this.rollRecovery()
-                break;
-            case EndGame.NAME:
-                return this.context;
-            default: throw new Error("incorrect state: " + this.context.state.name + " in flow()");
+    run() {
+        if (!this.firstPlayerAdded) {
+            console.warn("назначьте первого игрока")
+            return
+        }
+        if (!this.secondPlayerAdded) {
+            console.warn("назначьте второго игрока")
+            return
+        }
+        let intervalId;
+        intervalId = setInterval((intervalId) => {
+            try {
+                this.context.state.next();
+                if (this.context.state.name == EndGame.NAME) {
+                    clearInterval(intervalId);
+                }
+            } catch (error) {
+                clearInterval(intervalId);
+            }
+            
+        }, 1000);
+    }
+
+    getOnContextEmiter() { // испускает события по смене контекста
+        return this.context.onChangeEvent$;
+    }
+
+    getOnPlayerEmiter() { // испускает события на которые должен реагировать игрок
+        return this.context.onGameEvent$;
+    }
+
+    addFirstPlayer(isManual: boolean, hero: Hero) {
+        if (this.firstPlayerAdded) {
+            console.warn("первый игрок уже добавлен");
+            return
+        }
+        let player = this.playerFactory(isManual, hero, this.dice);
+        this.context.setFirstPlayer(player);
+        this.firstPlayerAdded = true;
+        // Подписка!
+        player.getEventEmiter().subscribe(this.getPlayerEventHandler());
+        this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
+    }
+
+    addSecondPlayer(isManual: boolean, hero: Hero) {
+        if (this.secondPlayerAdded) {
+            console.warn("первый игрок уже добавлен");
+            return
+        }
+        let player = this.playerFactory(isManual, hero, this.dice);
+        this.context.setSecondPlayer(player);
+        this.secondPlayerAdded = true;
+        // Подписка
+        player.getEventEmiter().subscribe(this.getPlayerEventHandler());
+        this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
+    }
+
+    playerFactory(isManual, hero, dice) {
+        if (isManual) {
+            return new Player(hero, dice);
+        } else {
+            return new PlayerAI(hero, dice);
         }
     }
 
-    rollSpeed() {
-        for (const [index, player] of this.context.players) {
-            this.onPlayerEvent$.next({
-                name: 'rollSpeed',
-                player: player,
-            })
+    getPlayerEventHandler() {
+        return {
+            next: (v) => {
+                console.log('fromPlayerEvent: ', v);
+                if (v == null) { // пропустить начальное значение
+                    return;
+                }
+                this.context.state.handle(v);
+            }
         }
     }
 
-    rollAttackAndDefence() {
-        this.onPlayerEvent$.next({
-            name: 'rollAttack',
-            player: this.context.getAttackPlayer(),
-        })
-        this.onPlayerEvent$.next({
-            name: 'rollDefence',
-            player: this.context.getDefencePlayer(),
-        })
-    }
-
-    chooseDamageSet(): void {
-        this.onPlayerEvent$.next({
-            name: 'chooseDamageSet',
-            damage: this.context.damage,
-            player: this.context.getDefencePlayer(),
-        })
-    }
-
-    rollRecovery(): void {
-        this.onPlayerEvent$.next({
-            name: 'rollRecovery',
-            player: this.context.getLooserPlayer(),
-        })
-    }
-
-    onRolledRecoveryHandler(roll: number[], player: PlayerI) {
-        if (this.context.state.name !== WaitRolledRecovery.NAME) {
-            console.warn(this.context.state.name + " != " + WaitRolledRecovery.NAME);
-            return;
+    getGameEventHandler(player) { // для AI это будет автогенерация событий, для игрока сообщение в интерфейс, сейчас это вызов метода
+        return {
+            next: (v) => {
+                if (v == null) { // пропустить начальное значение
+                    return;
+                }
+                if (player !== v.player) {
+                    return;
+                }
+                console.log('fromGameEvent: ', v);
+                switch (v.name) {
+                    case 'rollSpeed':
+                        player.rollSpeed();
+                        break;
+                    case 'rollAttack':
+                        player.rollAttack();
+                        break;
+                    case 'rollDefence':
+                        player.rollDefence();
+                        break;
+                    case 'chooseDamageSet':
+                        player.chooseDamageSet(v.damage);
+                        break;
+                    case 'rollRecovery':
+                        player.rollRecovery();
+                        break;
+                    default:
+                        console.warn("event not support: " + v.name);
+                        break;
+                }
+            }
         }
-        this.context.addRecoveryRoll(roll, player);
-        this.context.next();
-        this.flow();
-        return;
-    }
-
-    onChoosedDamageSetHandler(damageSet, player) {
-        if (this.context.state.name !== WaitChoosedDamage.NAME) {
-            console.warn(this.context.state.name + " != " + WaitChoosedDamage.NAME);
-            return;
-        }
-        this.context.addDamageSet(damageSet, player);
-        this.context.next();
-        this.flow();
-        return;
-    }
-
-    onRolledBattleHandler(roll, player) {
-        if (this.context.state.name !== WaitRolledAttackAndDefence.NAME) {
-            console.warn(this.context.state.name + " != " + WaitRolledAttackAndDefence.NAME);
-            return;
-        }
-        this.context.addAttackRoll(roll, player);
-        this.context.addDefenceRoll(roll, player);
-        this.context.next();
-        this.flow();
-        return;
-    }
-
-    onRolledSpeedHandler(playerRollSpeed: number[], player: PlayerI) {
-        if (this.context.state.name !== WaitRolledSpeed.NAME) {
-            console.warn(this.context.state.name + " != " + WaitRolledSpeed.NAME);
-            return;
-        }
-        this.context.addSpeedRoll(playerRollSpeed, player);
-        this.context.next();
-        this.flow();
-        return;
     }
 }

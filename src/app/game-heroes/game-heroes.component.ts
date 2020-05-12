@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Subject, BehaviorSubject } from 'rxjs';
 import { HeroService } from '../hero.service';
 import { Hero } from '../hero';
-import { Game, PlayerAI, Player, Dice, GameContext } from '../game.v4';
+import { GameHandler } from '../game.v4';
 // import { Game, PlayerAI, Player, Dice, GameContext } from '../game.v3';
 // import { ContextGame, ContextRound, ContextStep, Player } from '../game.v2';
 
@@ -79,110 +79,28 @@ export class GameHeroesComponent implements OnInit {
 
   game() {
     if (this.validateGame()) {
-      let playerFactory = (isManual, hero, dice) => {
-        if (isManual) {
-          return new Player(hero, dice);
-        } else {
-          return new PlayerAI(hero, dice);
-        }
-      }
-      
-      let dice = new Dice(1,6);
-      let firstPlayer = playerFactory(this.firstManual, this.firstChangeHero, dice);
-      let secondPlayer = playerFactory(this.secondManual, this.secondChangeHero, dice);
-      let context = new GameContext();
-      context.setFirstPlayer(firstPlayer);
-      context.setSecondPlayer(secondPlayer);
-      let game = new Game(context, dice);
-
       let i = 0;
-      context.onChange$.subscribe({
+      let game = new GameHandler();
+      game.addFirstPlayer(this.firstManual, this.firstChangeHero);
+      game.addSecondPlayer(this.secondManual, this.secondChangeHero);
+      // game.context.state.onPlayerEvent$.subscribe({
+      //   next: (v) => {
+      //     console.log('playerEvent: ', v);
+      //   }
+      // });
+      game.context.onChangeEvent$.subscribe({
         next: (v) => {
+          if (v == null) {
+            return
+          }
+          console.log('forState: ', v.state.name, v);
           this.historyIndex = this.maxHistoryIndex = i;
           this.historyContext.set(this.maxHistoryIndex, v);
           this.context = v;
-          // console.log(v.state.name, v);
           i++;
         }
       });
-
-      let gamePlayerEventHandler = {
-        next: (v) => {
-          if (v == null) { // пропустить начальное значение
-            return;
-          }
-          // console.log(v);
-          switch (v.name) {
-            case 'rolledSpeed':
-              console.log('rolledSpeed: ' + v.roll);
-              game.onRolledSpeedHandler(v.roll, v.player);
-              break;
-            case 'rolledAttack':
-              console.log('rolledAttack: ' + v.roll);
-              game.onRolledBattleHandler(v.roll, v.player);
-              break;
-            case 'rolledDefence':
-              console.log('rolledDefence: ' + v.roll);
-              game.onRolledBattleHandler(v.roll, v.player);
-              break;
-            case 'choosedDamageSet':
-              console.log('choosedDamageSet: ' + v.damageSet);
-              game.onChoosedDamageSetHandler(v.damageSet, v.player);
-              break;
-            case 'rolledRecovery':
-              console.log('rolledRecovery: ' + v.roll);
-              game.onRolledRecoveryHandler(v.roll, v.player);
-              break;
-            default:
-              console.warn("event not support: " + v.name);
-              break;
-          }
-        }
-      };
-      firstPlayer.onRolledDice$.subscribe(gamePlayerEventHandler);
-      secondPlayer.onRolledDice$.subscribe(gamePlayerEventHandler);
-
-      let playerGameEventHandler = (player) => {
-        return {
-          next: (v) => {
-            if (v == null) { // пропустить начальное значение
-              return;
-            }
-            if (player !== v.player) {
-              return;
-            }
-            switch (v.name) {
-              case 'rollSpeed':
-                // console.log('rollSpeed', player);
-                player.rollSpeed();
-                break;
-              case 'rollAttack':
-                // console.log('rollAttack', player);
-                player.rollAttack();
-                break;
-              case 'rollDefence':
-                // console.log('rollDefence', player);
-                player.rollDefence();
-                break;
-              case 'chooseDamageSet':
-                // console.log('chooseDamageSet', player);
-                player.chooseDamageSet(v.damage);
-                break;
-              case 'rollRecovery':
-                // console.log('rollRecovery', player);
-                player.rollRecovery();
-                break;
-              default:
-                console.warn("event not support: " + v.name);
-                break;
-            }
-          }
-        }
-      }
-      game.onPlayerEvent$.subscribe(playerGameEventHandler(firstPlayer));
-      game.onPlayerEvent$.subscribe(playerGameEventHandler(secondPlayer));
-
-      game.flow();
+      game.run();
     } else {
       console.log('errors')
     }
