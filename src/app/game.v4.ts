@@ -4,8 +4,8 @@ import { cloneDeep as lodashClonedeep } from 'lodash';
 
 interface PlayerI
 {
-    isWin: boolean;// del
-
+    isWin;
+    
     getHits(): number;
     takeDamage(damages);
     recovery(roll);
@@ -19,7 +19,7 @@ interface PlayerI
     getEventEmiter(): BehaviorSubject<any>;
 }
 
-export class Player implements PlayerI
+class Player implements PlayerI
 {
     hero: Hero;
     dice: Dice; // создаются одинаковые для игрока и игры
@@ -162,7 +162,7 @@ export class Player implements PlayerI
     }
 }
 
-export class PlayerAI extends Player implements PlayerI
+class PlayerAI extends Player implements PlayerI
 {
     rollAttack(): void {
         this.onRolledDice$.next({
@@ -235,7 +235,7 @@ export class PlayerAI extends Player implements PlayerI
     }
 }
 
-export class Dice
+class Dice
 {
     min: number;
     max: number;
@@ -606,13 +606,16 @@ class EndGame extends BaseState implements GameState
     name = 'EndGame';
 
     next() {
-        // Разрушить событийные линии
+        // TODO: Разрушить событийные линии
         return false;
         console.warn('наградить!')
     }
 }
 
-export class GameContext
+// TODO: Выпадает ошибка на невозможность снять повреждения. 
+// Возможно неправильно определяется игрок которому надо снимать повреждения, 
+// либо не тот игрок отправляется при запросе на выбор повреждение
+class GameContext
 {
     static readonly FIRST_PLAYER = 0;
     static readonly SECOND_PLAYER = 1;
@@ -920,6 +923,7 @@ export class GameHandler
                 this.context.state.next();
                 if (this.context.state.name == EndGame.NAME) {
                     clearInterval(intervalId);
+                    return this.context;
                 }
             } catch (error) {
                 clearInterval(intervalId);
@@ -944,7 +948,7 @@ export class GameHandler
         let player = this.playerFactory(isManual, hero, this.dice);
         this.context.setFirstPlayer(player);
         this.firstPlayerAdded = true;
-        // Подписка!
+        // Подписка
         player.getEventEmiter().subscribe(this.getPlayerEventHandler());
         this.getOnPlayerEmiter().subscribe(this.getGameEventHandler(player));
     }
@@ -1015,4 +1019,19 @@ export class GameHandler
             }
         }
     }
+}
+
+export default function testRun(firstManual: boolean, firstChangeHero: Hero, secondManual: boolean, secondChangeHero: Hero) {
+    let game = new GameHandler();
+    game.addFirstPlayer(firstManual, firstChangeHero);
+    game.addSecondPlayer(secondManual, secondChangeHero);
+    game.getOnContextEmiter().subscribe({
+        next: (v) => {
+            if (v == null) {
+                return
+            }
+            console.log('forState: ', v.state.name, v);
+        }
+    });
+    game.run();
 }

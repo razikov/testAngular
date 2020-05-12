@@ -83,11 +83,6 @@ export class GameHeroesComponent implements OnInit {
       let game = new GameHandler();
       game.addFirstPlayer(this.firstManual, this.firstChangeHero);
       game.addSecondPlayer(this.secondManual, this.secondChangeHero);
-      // game.context.state.onPlayerEvent$.subscribe({
-      //   next: (v) => {
-      //     console.log('playerEvent: ', v);
-      //   }
-      // });
       game.context.onChangeEvent$.subscribe({
         next: (v) => {
           if (v == null) {
